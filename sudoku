@@ -1,0 +1,159 @@
+# -*- coding: utf-8 -*-
+"""
+Created on Thu Oct 13 16:33:11 2022
+
+@author: User
+"""
+
+fila = 'ABCDEFGHI'
+cols = '123456789'
+
+def cross(A, B):
+    "Cross product of elements in A and elements in B."
+    "Producto cruzado de elementos en A y elementos en B"
+    return [a+b for a in A for b in B]
+#mezclar las filas y columnas
+casillas = cross(fila, cols)
+#Crear las filas
+fila_units = [cross(r, cols) for r in fila]
+#Crear las columans
+columna_units = [cross(fila, c) for c in cols]
+#Crear los cuadros del sudoku
+cuadro_units = [cross(rs, cs) for rs in ('ABC','DEF','GHI') for cs in ('123','456','789')]
+#????????????
+unitlista = fila_units + columna_units + cuadro_units
+
+unidades = dict((s, [u for u in unitlista if s in u]) for s in casillas)
+
+pares = dict((s, set(sum(unidades[s],[]))-set([s])) for s in casillas)
+
+
+#Mostrar en pantalla la visualizacion del sudoku
+def mostrarSudoku(valores):  
+    width = 1+max(len(valores[s]) for s in casillas)
+    line = '*'.join(['-'*(width*3)]*3)
+    for r in fila:
+    #    print("%")
+    #Imprime los espacios de cada cuadro, fila y columna
+        print(''.join(valores[r+c].center(width)+('|' if c in '36' else '')
+                      for c in cols))
+        if r in 'CF': print(line)
+    return
+
+def grid_values_original(cuadro):
+    #guardamos los valores enviados del sudoku y se guardan en una posicion
+    #Se convertiran los datos para en un diccionario con la funcion dict(), y zip para agrupar las tuplas
+    return dict(zip(casillas, cuadro))
+
+def llenarValores(cuadro):
+    valores = []
+    for c in cuadro:
+        if c == '.':
+            valores.append('123456789')
+        elif c in '123456789':
+            valores.append(c)
+    return dict(zip(casillas, valores))
+
+
+def eliminacion(valores):
+    """Eliminate values from peers of each box with a single value.
+    """
+    """Eliminar valores de pares de cada caja con un solo valor.
+     """
+    
+    solved_values = [casilla for casilla in valores.keys() if len(valores[casilla]) == 1]
+    for casilla in solved_values:
+        digit = valores[casilla]
+        for par in pares[casilla]:
+            valores[par] = valores[par].replace(digit,'')
+    return valores
+
+def only_choice(valores):
+    for unidad in unitlista:
+        for digito in '123456789':
+            dposi = [casilla for casilla in unidad if digito in valores[casilla]]
+            if len(dposi) == 1:
+                valores[dposi[0]] = digito
+    return valores
+
+def reduce_sudoku(valores):
+    parar = False
+    while not parar:
+        # Check how many boxes have a determined value
+        # Comprobar cuantas casillas tienen un valor determinado
+        
+        solved_values_before = len([casilla for casilla in valores.keys() if len(valores[casilla]) == 1])
+
+        # Eliminate Strategy  
+        
+        valores = eliminacion(valores)
+
+        # Use the Only Choice Strategy
+        # Usa la estrategia de la única opción
+        valores = only_choice(valores)
+
+        # Check how many boxes have a determined value, to compare
+        # Comprobar cuantas casillas tienen un valor determinado, para comparar
+        solved_values_after = len([casilla for casilla in valores.keys() if len(valores[casilla]) == 1])
+        # If no new values were added, stop the loop.
+        # Si no se agregaron nuevos valores, detenga el ciclo.
+        stalled = solved_values_before == solved_values_after
+        
+        # Sanity check, return False if there is a box with zero available values:
+        # Comprobación de cordura, devolver Falso si hay una casilla con cero valores disponibles:
+        if len([casilla for casilla in valores.keys() if len(valores[casilla]) == 0]):
+            return False
+    return valores
+
+def backtracking(valores):
+    valores = reduce_sudoku(valores)
+    if valores is False:
+        return False ## Failed earlier
+    if all(len(valores[s]) == 1 for s in casillas): 
+        return valores ## Solved!
+    
+    # Choose one of the unfilled squares with the fewest possibilities
+    # Elija uno de los cuadrados vacíos con la menor cantidad de posibilidades
+    unfilled_squares= [(len(valores[s]), s) for s in casillas if len(valores[s]) > 1]
+    n,s = min(unfilled_squares)
+    
+  
+    # recurrencia para resolver cada uno de los sudokus resultantes
+    for valor in valores[s]:
+        nova_sudoku = valores.copy()
+        nova_sudoku[s] = valor
+        attempt = backtracking(nova_sudoku)
+        if attempt:
+            return attempt
+        
+        
+def solve(cuadro):
+    # Create a dictionary of values from the grid
+    # Crear un diccionario de valores a partir de la cuadrícula.
+    valores = llenarValores(cuadro)
+    return backtracking(valores)
+
+if __name__ == '__main__':
+
+     
+    
+    sudokufila1 = '....9..3.'
+    sudokufila2 = '34...75.8'
+    sudokufila3 = '....2....'
+    sudokufila4 = '....5...2'
+    sudokufila5 = '9.73..4.6'
+    sudokufila6 = '.2....3..'
+    sudokufila7 = '67.......'
+    sudokufila8 = '2....6.8.'
+    sudokufila9 = '.......73'
+    
+    
+    sudoku_resolver = sudokufila1 + sudokufila2 + sudokufila3 + sudokufila4 + sudokufila5 + sudokufila6 + sudokufila7 + sudokufila8 + sudokufila9 
+    
+    
+    print ("Sudoku:")
+    # Enviamos el sudoku que creamos
+    mostrarSudoku(grid_values_original(sudoku_resolver))
+    print (" ")
+    print ("solución:")
+    mostrarSudoku(solve(sudoku_resolver))
